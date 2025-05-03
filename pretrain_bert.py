@@ -24,6 +24,8 @@ def get_args(complex, anomaly_ratio):
     parser.add_argument('--model_path', type=str, default='checkpoints/fb15k-237/bert-pretrained')
     parser.add_argument('--epoch', type=int, default=20, help='epoch')
     parser.add_argument('--batch_size', type=int, default=256, help='batch size')
+    #补丁
+    parser.add_argument('--gradient_accumulation_steps', type=int, default=1, help='Number of gradient accumulation steps')
     parser.add_argument('--device', type=str, default='cuda:3', help='select a gpu like cuda:0')
     parser.add_argument('--dataset', type=str, default='fb15k-237', help='select a dataset: fb15k-237 or wn18rr')
     parser.add_argument('--max_seq_length', type=int, default=64, help='max sequence length for inputs to bert')
@@ -92,6 +94,7 @@ def get_args(complex, anomaly_ratio):
 
 class NBertTrainer:
     def __init__(self, config: dict):
+        self.config = config
         self.is_validate = True if config['task'] == 'validate' else False
         self.pretraining = True if config['task'] == 'pretrain' else False
         self.pretraining_path = config['pretraining_path']
@@ -101,7 +104,15 @@ class NBertTrainer:
         config['low_degree'] = True
         tokenizer, self.train_dl, self.label = self._load_dataset(config)
         self.model = self._load_model(config, tokenizer).to(config['device'])
-        optimizers = self.model.configure_optimizers(total_steps=len(self.train_dl)*self.epoch)
+
+        #修改total_steps
+        if 'gradient_accumulation_steps' in config and config['gradient_accumulation_steps'] > 1:
+            # 计算实际更新步数
+            effective_steps = (len(self.train_dl) + config['gradient_accumulation_steps'] - 1) // config['gradient_accumulation_steps'] * self.epoch
+        else:
+            effective_steps = len(self.train_dl) * self.epoch
+        optimizers = self.model.configure_optimizers(total_steps=effective_steps)
+        #optimizers = self.model.configure_optimizers(total_steps=len(self.train_dl)*self.epoch)
         self.opt, self.scheduler = optimizers['optimizer'], optimizers['scheduler']
 
         self.soft_label = None
@@ -119,8 +130,8 @@ class NBertTrainer:
         data_module = KGCDataModule(config, tokenizer, encode_text=True)
         tokenizer = data_module.get_tokenizer()
         train_dl = data_module.get_train_dataloader()
-        # dev_dl = data_module.get_dev_dataloader()
-        # test_dl = data_module.get_test_dataloader()
+        #dev_dl = data_module.get_dev_dataloader()
+        #test_dl = data_module.get_test_dataloader()
         label = data_module.label
 
         return tokenizer, train_dl, label
@@ -136,27 +147,32 @@ class NBertTrainer:
         self.model.train()
         outputs = list()
         all_sample_loss = []
-        # 补丁2：梯度累积步数
-        gradient_accumulation_steps = 4
 
         for batch_idx, batch_data in enumerate(tqdm(self.train_dl)):
             
             batch_loss, sample_loss, _, rank = self.model.training_step(batch_data, batch_idx)
 
-            # 补丁 平均梯度
-            batch_loss = batch_loss / gradient_accumulation_steps
+            # 补丁
+            batch_loss = batch_loss / self.config['gradient_accumulation_steps']
 
             outputs.append((batch_loss.item(),rank))
             # 2. backward
-            self.opt.zero_grad()
             batch_loss.backward()
-            self.opt.step()
-            if self.scheduler is not None:
-                self.scheduler.step()
+
+            #补丁
+            if (batch_idx + 1) % self.config['gradient_accumulation_steps'] == 0 or (batch_idx + 1 == len(self.train_dl)):
+                # 梯度裁剪（可选，建议添加）
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                self.opt.step()
+                self.opt.zero_grad()    #重置梯度
+
+                if self.scheduler is not None:
+                # 补丁 只有在实际更新参数后才调整学习率
+                    self.scheduler.step()
+
             if not self.pretraining:
                 all_sample_loss += sample_loss
-                # 补丁1：释放缓存的显存
-                torch.cuda.empty_cache()
+
         loss, scores = self.model.training_epoch_end(outputs) 
         return loss, scores
 

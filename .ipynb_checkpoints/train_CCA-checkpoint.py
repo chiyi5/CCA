@@ -259,14 +259,14 @@ class CCATrainer:
             joint_batch_loss =   text_batch_loss + struc_batch_loss + inter_batch_loss
 
             # 计算联合损失并进行梯度累积
-            joint_batch_loss = joint_batch_loss / self.args['gradient_accumulation_steps']
+            joint_batch_loss = joint_batch_loss / self.args.gradient_accumulation_steps
 
             #AMP
             if self.scaler is not None:
                 with torch.cuda.amp.autocast():
                     self.scaler.scale(joint_batch_loss).backward()
                     # 当累积到指定步数时更新参数
-                    if (batch_idx + 1) % self.args['gradient_accumulation_steps'] == 0:
+                    if (batch_idx + 1) % self.args.gradient_accumulation_steps == 0:
                         self.scaler.unscale_(self.joint_opt)
                         self.scaler.step(self.joint_opt)
                         self.scaler.update()
@@ -278,7 +278,7 @@ class CCATrainer:
                 joint_batch_loss.backward()
 
                 # 当累积到指定步数时更新参数
-                if (batch_idx + 1) % self.args['gradient_accumulation_steps'] == 0:
+                if (batch_idx + 1) % self.args.gradient_accumulation_steps == 0:
                     self.joint_opt.step()
                     self.joint_opt.zero_grad()
 
@@ -452,7 +452,7 @@ class CCATrainer:
     def configure_optimizers(self, total_steps: int):
 
         # 根据梯度累积修改总步数
-        total_steps = total_steps // self.args['gradient_accumulation_steps']
+        total_steps = total_steps // self.args.gradient_accumulation_steps
         
         parameters = self.get_parameters()
         opt = AdamW(parameters, eps=1e-6)

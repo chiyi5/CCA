@@ -22,14 +22,16 @@ python CCA-main/Code/data_process/gen_anomaly.py --model_path CCA-main/checkpoin
 ### Pretrain bert encoder with entity description
 ```bash
 #python pretrain_bert.py --task pretrain --model_path checkpoints/bert-base-cased --epoch 20 --batch_size 512 --device cuda:0 --dataset wn18rr --max_seq_length 64 --lm_lr 1e-4 --lm_label_smoothing 0.8 --num_workers 8 --pin_memory True 
-python CCA-main/pretrain_bert.py --task pretrain --model_path checkpoints/bert-base-cased --epoch 20 --batch_size 128 --device cuda:0 --dataset wn18rr --max_seq_length 64 --lm_lr 1e-4 --lm_label_smoothing 0.8 --num_workers 8 --pin_memory True 
+python CCA-main/pretrain_bert.py --task pretrain --model_path checkpoints/bert-base-cased --epoch 20 --batch_size 64  --gradient_accumulation_steps 8 --device cuda:0 --dataset wn18rr --max_seq_length 64 --lm_lr 1e-4 --lm_label_smoothing 0.8 --num_workers 8 --pin_memory True  
 
 ```
 
 
 ### Train CCA
 ```bash
-python train_CCA.py --epoch 20 --model_path checkpoints/wn18rr/bert-pretrained/ --dataset wn18rr --batch_size 512 --num_workers 32 --use_amp --device cuda:0
+#python train_CCA.py --epoch 20 --model_path checkpoints/wn18rr/bert-pretrained/ --dataset wn18rr --batch_size 512 --num_workers 32 --use_amp --device cuda:0
+python CCA-main/train_CCA.py --epoch 20 --model_path CCA-main/checkpoints/wn18rr/bert-pretrained/ --dataset wn18rr --batch_size 64 --gradient_accumulation_steps 8 --num_workers 32 --use_amp --device cuda:0
+
 ```
 
 

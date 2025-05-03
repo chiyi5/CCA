@@ -1,7 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="root@nm.tools.buluai.cn:11007 password" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="root@nm.tools.buluai.cn:10302 password" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
+    <option name="confirmBeforeUploading" value="false" />
     <serverData>
+      <paths name="root@nm.tools.buluai.cn:10195 password">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/CCA-main" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="root@nm.tools.buluai.cn:10302 password">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/CCA-main" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="root@nm.tools.buluai.cn:10466 password">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/root/CCA-main" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="root@nm.tools.buluai.cn:11007 password">
         <serverdata>
           <mappings>
